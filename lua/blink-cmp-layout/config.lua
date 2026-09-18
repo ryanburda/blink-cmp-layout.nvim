@@ -12,7 +12,7 @@
 --- @field gap blink-cmp-layout.Measure Rows held clear between the cursor line and the windows
 --- @field height blink-cmp-layout.Measure Rows the menu and documentation window are held at
 --- @field align 'text' | 'window' Left edge: past the gutter, or at the window's own edge
---- @field direction ('below' | 'above')[] Which side of the cursor the pair prefers
+--- @field direction ('below' | 'above')[] Which side of the cursor the pair prefers while the signature help window is closed; while it is open, the pair instead follows whichever side the signature help window landed on
 --- @field menu blink-cmp-layout.MenuConfig
 --- @field documentation blink-cmp-layout.DocumentationConfig
 --- @field signature blink-cmp-layout.SignatureConfig
@@ -26,7 +26,6 @@
 
 --- @class blink-cmp-layout.SignatureConfig
 --- @field enabled boolean When off, blink places the signature window itself
---- @field direction ('above' | 'below')[] Which side of the cursor it prefers
 --- @field follow_cursor boolean Re-ask the server for signature help on every insert-mode cursor move
 
 local M = {}
@@ -48,7 +47,6 @@ M.defaults = {
   },
   signature = {
     enabled = true,
-    direction = { 'above', 'below' },
     follow_cursor = true,
   },
 }
@@ -70,9 +68,6 @@ function M.extend(opts)
   end
   for _, direction in ipairs(config.direction) do
     one_of(direction, 'direction', { 'below', 'above' })
-  end
-  for _, direction in ipairs(config.signature.direction) do
-    one_of(direction, 'signature.direction', { 'below', 'above' })
   end
 
   return config

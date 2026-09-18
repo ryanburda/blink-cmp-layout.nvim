@@ -88,13 +88,20 @@ local function place_signature()
   local gap = geometry.gap(box, cursor, settings.measure(config.gap, box))
   local bands = geometry.cursor_bands(box, cursor, gap)
 
-  local preferred = {}
-  for _, direction in ipairs(config.signature.direction) do
-    table.insert(preferred, bands[direction])
-  end
+  -- The menu stacks onto whichever edge of this window faces away from the
+  -- cursor (see `place_menu`), so the pair must always land on the same side
+  -- of the cursor line. Rather than let each window fall through a preferred
+  -- direction independently -- which could pick opposite sides when both fit
+  -- -- the side is decided once, by which half of the pane the cursor is in,
+  -- and only falls through to the other half when that one has no room at
+  -- all.
+  local cursor_row = box.row + cursor - 1
+  local side = (cursor_row - box.row) < box.height / 2 and 'below' or 'above'
+  local other = side == 'below' and 'above' or 'below'
 
-  for _, band in ipairs(preferred) do
-    -- anything shallower than this renders as a sliver, so try the next
+  for _, direction in ipairs({ side, other }) do
+    local band = bands[direction]
+    -- anything shallower than this renders as a sliver, so try the other side
     if geometry.room(band) > border.vertical then
       win:set_height(math.max(math.min(win:get_height(), geometry.room(band)) - border.vertical, 1))
       return win:set_win_config({
@@ -132,33 +139,19 @@ local function place_menu()
 
   local band
   if config.signature.enabled and signature ~= nil and signature.win:is_open() then
-    -- stacked onto the signature window, clamped to also clear the cursor
-    -- line: below its far edge on the side `direction` prefers, falling
-    -- through to its near edge -- the other side of the cursor entirely --
-    -- when that side has no room, same as the cursor-relative bands below
+    -- extends outward from whichever edge of the signature window faces away
+    -- from the cursor, touching it rather than leaving a gap -- the
+    -- signature window already keeps its near edge clear of the cursor
+    -- line, so the two always end up right next to each other on the same
+    -- side of it
     local signature_config = vim.api.nvim_win_get_config(signature.win:get_win())
     local signature_first = signature_config.row
     local signature_last = signature_first + signature.win:get_height() - 1
     local cursor_row = pane.row + cursor - 1
 
-    local sides = {
-      below = {
-        first = math.max(signature_last + 1, cursor_row + gap + 1),
-        last = pane.row + pane.height - 1,
-        anchor = 'top',
-      },
-      above = {
-        first = pane.row,
-        last = math.min(signature_first - 1, cursor_row - gap - 1),
-        anchor = 'bottom',
-      },
-    }
-
-    local preferred = {}
-    for _, direction in ipairs(config.direction) do
-      table.insert(preferred, sides[direction])
-    end
-    band = geometry.pick(preferred, height + border.vertical)
+    band = signature_first < cursor_row
+      and { first = pane.row, last = signature_first - 1, anchor = 'bottom' }
+      or { first = signature_last + 1, last = pane.row + pane.height - 1, anchor = 'top' }
   else
     -- the preferred side of the cursor, unless the window does not fit there
     local bands = geometry.cursor_bands(pane, cursor, gap)
