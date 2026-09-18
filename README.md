@@ -4,13 +4,15 @@ Lays out [blink.cmp](https://github.com/saghen/blink.cmp)'s completion, document
 signature windows so they stay clear of the line you are editing, instead of following the
 cursor and covering it.
 
-- The **completion menu** is held a configurable gap -- `'scrolloff'` rows by default -- away
-  from the cursor line, below it when there is room and above it when there is not.
+- The **signature help window** is held a configurable gap -- `'scrolloff'` rows by default --
+  away from the cursor line, above it when there is room and below it when there is not. It
+  never moves to make room for the menu.
+- The **completion menu** prefers the same gap below the cursor line, but stacks onto the far
+  edge of the signature help window instead whenever that window is open, so the two never
+  overlap and the signature help window never has to move out of the way.
 - The **documentation window** sits directly beside the menu, sharing its row and height, with
   the two together capped at a configurable width -- `'colorcolumn'` by default -- so the pair
   never grows wider than the code it covers.
-- The **signature help window** stacks onto the menu, on the edge facing the cursor, so it is
-  the nearest of the three to the line being edited and is on screen whenever the menu is.
 - All three start at the left edge of the *text*, past the number column and the rest of the
   gutter, rather than at the window edge.
 - Optionally, signature help is re-requested on every insert-mode cursor move, so it stays up
@@ -88,9 +90,11 @@ require('blink-cmp-layout').setup({
   -- 'window' -- left edge at the window's own edge, over the gutter
   align = 'text',
 
-  -- Which side of the cursor the pair prefers; it falls through to the next
-  -- entry when its full height does not fit, and takes the roomier side when
-  -- neither does.
+  -- Which side of the cursor the pair prefers when the signature help window
+  -- is closed; it falls through to the next entry when its full height does
+  -- not fit, and takes the roomier side when neither does. While the
+  -- signature help window is open, the pair stacks onto its far edge
+  -- instead, regardless of this setting.
   direction = { 'below', 'above' },
 
   menu = {
@@ -117,12 +121,10 @@ require('blink-cmp-layout').setup({
     -- not.
     enabled = true,
 
-    -- Which edge of the menu it stacks onto:
-    --   'near' -- the edge facing the cursor, inside the gap
-    --   'far'  -- the edge away from the cursor, beyond the menu
-    placement = 'near',
-
-    -- Which side of the cursor it prefers while the menu is closed.
+    -- Which side of the cursor it prefers; it falls through to the next
+    -- entry when its full height does not fit, and takes the roomier side
+    -- when neither does. Unaffected by the menu -- see the top-level
+    -- `direction` above for how the menu reacts to this window instead.
     direction = { 'above', 'below' },
 
     -- Re-ask the server for signature help on every insert-mode cursor move,

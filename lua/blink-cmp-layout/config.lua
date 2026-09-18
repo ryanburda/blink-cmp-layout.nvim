@@ -26,8 +26,7 @@
 
 --- @class blink-cmp-layout.SignatureConfig
 --- @field enabled boolean When off, blink places the signature window itself
---- @field placement 'near' | 'far' Which edge of the menu it stacks onto: the one facing the cursor, or away from it
---- @field direction ('above' | 'below')[] Which side of the cursor it prefers while the menu is closed
+--- @field direction ('above' | 'below')[] Which side of the cursor it prefers
 --- @field follow_cursor boolean Re-ask the server for signature help on every insert-mode cursor move
 
 local M = {}
@@ -49,7 +48,6 @@ M.defaults = {
   },
   signature = {
     enabled = true,
-    placement = 'near',
     direction = { 'above', 'below' },
     follow_cursor = true,
   },
@@ -67,7 +65,6 @@ function M.extend(opts)
   local config = vim.tbl_deep_extend('force', M.defaults, opts or {})
 
   one_of(config.align, 'align', { 'text', 'window' })
-  one_of(config.signature.placement, 'signature.placement', { 'near', 'far' })
   if type(config.direction) ~= 'table' or #config.direction == 0 then
     error('blink-cmp-layout: `direction` must be a non-empty list of "below" / "above"')
   end
