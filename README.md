@@ -1,1 +1,207 @@
 # blink-cmp-layout.nvim
+
+Lays out [blink.cmp](https://github.com/saghen/blink.cmp)'s completion, documentation and
+signature windows so they stay clear of the line you are editing, instead of following the
+cursor and covering it.
+
+- The **completion menu** is held a configurable gap -- `'scrolloff'` rows by default -- away
+  from the cursor line, below it when there is room and above it when there is not.
+- The **documentation window** sits directly beside the menu, sharing its row and height, with
+  the two together capped at a configurable width -- `'colorcolumn'` by default -- so the pair
+  never grows wider than the code it covers.
+- The **signature help window** stacks onto the menu, on the edge facing the cursor, so it is
+  the nearest of the three to the line being edited and is on screen whenever the menu is.
+- All three start at the left edge of the *text*, past the number column and the rest of the
+  gutter, rather than at the window edge.
+- Optionally, signature help is re-requested on every insert-mode cursor move, so it stays up
+  for as long as the cursor is inside a call rather than only from the moment you type `(`.
+
+Every window is placed against the window being edited, so nothing moves as results come in,
+and nothing is anchored to the cursor.
+
+## Requirements
+
+- Neovim 0.10+
+- blink.cmp 1.x
+
+This plugin replaces blink's internal `update_position` functions, which are not part of its
+public API. Pin blink to a version range (`version = '1.*'`) so that an upstream refactor
+cannot break the layout without warning.
+
+## Installation
+
+The plugin must be set up **after** `require('blink.cmp').setup()`. blink builds its windows
+from the merged config the first time they are required, and this plugin requires them as soon
+as it is set up -- so setting it up first would leave the windows built from blink's defaults.
+
+With [lazy.nvim](https://github.com/folke/lazy.nvim), that means calling it from blink's own
+`config` function rather than passing `opts`:
+
+```lua
+{
+  'saghen/blink.cmp',
+  version = '1.*',
+  dependencies = { 'ryanburda/blink-cmp-layout.nvim' },
+  opts = {
+    -- your usual blink.cmp options
+  },
+  config = function(_, opts)
+    require('blink.cmp').setup(opts)
+    require('blink-cmp-layout').setup()
+  end,
+}
+```
+
+Without a plugin manager:
+
+```lua
+require('blink.cmp').setup({ --[[ ... ]] })
+require('blink-cmp-layout').setup()
+```
+
+`setup()` may be called again at any time to change the layout; the new options take effect the
+next time a window is placed.
+
+## Configuration
+
+The defaults reproduce everything described above:
+
+```lua
+require('blink-cmp-layout').setup({
+  -- Checked every time a window is placed, so it may vary by buffer:
+  --   enabled = function() return vim.bo.filetype ~= 'markdown' end
+  enabled = true,
+
+  -- Widest the menu and documentation window may be *together*, borders
+  -- included. The pane is always a limit as well, so a narrow window gives a
+  -- narrower pair.
+  max_width = 'colorcolumn',
+
+  -- Rows held clear between the cursor line and the windows.
+  gap = 'scrolloff',
+
+  -- Rows the menu and documentation window are held at, whatever they hold, so
+  -- they never resize under you. Defaults to blink's own `completion.menu.max_height`.
+  height = function() return require('blink.cmp.config').completion.menu.max_height end,
+
+  -- 'text'   -- left edge past the gutter, leaving line numbers visible
+  -- 'window' -- left edge at the window's own edge, over the gutter
+  align = 'text',
+
+  -- Which side of the cursor the pair prefers; it falls through to the next
+  -- entry when its full height does not fit, and takes the roomier side when
+  -- neither does.
+  direction = { 'below', 'above' },
+
+  menu = {
+    -- Placing the menu is what drives the rest: with this off, the
+    -- documentation and signature windows are left to blink as well.
+    enabled = true,
+
+    -- Share of the width the menu takes, the documentation window taking the
+    -- rest: a fraction of it when <= 1, else a column count. Set to 1 to give
+    -- the menu the whole width.
+    width = 0.5,
+  },
+
+  documentation = {
+    -- When off, blink places the documentation window itself -- which it does
+    -- relative to the menu window, so it still follows the menu.
+    enabled = true,
+  },
+
+  signature = {
+    -- Leave this on unless `menu.enabled` is off, or blink's own
+    -- `signature.enabled` is: blink places the signature window against the
+    -- menu and asserts the menu is window-relative, which a managed menu is
+    -- not.
+    enabled = true,
+
+    -- Which edge of the menu it stacks onto:
+    --   'near' -- the edge facing the cursor, inside the gap
+    --   'far'  -- the edge away from the cursor, beyond the menu
+    placement = 'near',
+
+    -- Which side of the cursor it prefers while the menu is closed.
+    direction = { 'above', 'below' },
+
+    -- Re-ask the server for signature help on every insert-mode cursor move,
+    -- so the window stays up for as long as the cursor is inside a call.
+    -- Costs one (cancellable) request per cursor move.
+    follow_cursor = true,
+  },
+})
+```
+
+### Measurements
+
+`max_width`, `gap` and `height` each accept three forms:
+
+| Form | Example | Meaning |
+| --- | --- | --- |
+| number | `max_width = 100` | used as-is |
+| option name | `max_width = 'colorcolumn'` | read from that vim option, in the scope it belongs to, every time a window is placed |
+| function | `gap = function(pane) return math.floor(pane.height / 8) end` | called with the pane being placed against, returning a number or an option name |
+
+Reading an option means the layout follows whatever the buffer is set to, rather than a value
+fixed at startup -- a buffer with a different `'colorcolumn'` gets its own cap. `'colorcolumn'`
+is read the way Neovim writes it: only the first entry counts, and a `+n` entry is resolved
+against `'textwidth'`. An option that is unset, or holds no usable number, means "no limit" for
+`max_width` and "no gap" for `gap`.
+
+The pane passed to a function is the text area of the window being edited, in editor-relative
+(0-indexed) coordinates:
+
+```lua
+--- @class blink-cmp-layout.Pane
+--- @field row number    Topmost editor row of the text area
+--- @field col number    Leftmost editor column of the text area
+--- @field height number
+--- @field width number
+```
+
+## Recommended blink.cmp settings
+
+These are blink's own options, not this plugin's, but they are what the layout was built
+around:
+
+```lua
+opts = {
+  completion = {
+    menu = { border = 'rounded', max_height = 8 },
+    documentation = {
+      auto_show = true,
+      auto_show_delay_ms = 0,
+      window = { border = 'rounded', max_height = 8 },
+    },
+  },
+  signature = {
+    enabled = true,
+    -- blink's defaults only ask the server on '(' and ',', so the window never
+    -- appears when the cursor moves into a call that is already written. With
+    -- `signature.follow_cursor` on, this is all that is left to cover:
+    -- entering insert mode inside one.
+    trigger = { show_on_insert = true },
+    window = { border = 'rounded' },
+  },
+}
+```
+
+`completion.documentation.auto_show` is worth turning on: the documentation window is where the
+signature of the item you are highlighting comes from, and with the layout it no longer covers
+anything.
+
+## How it works
+
+blink exposes no options for window placement, so the plugin replaces the `update_position`
+function on each of `blink.cmp.completion.windows.menu`,
+`blink.cmp.completion.windows.documentation` and `blink.cmp.signature.window`. Every caller
+looks those up on the module table at call time, so replacing them covers all of them, and the
+originals are kept for the cases the plugin does not handle.
+
+The cmdline completion menu is always left to blink: it is anchored to the command line rather
+than to a window, and has no pane to be laid out against.
+
+Windows are anchored with `relative = 'editor'`. A float's `row` / `col` address its outer
+corner, with the border drawn inside them, which is why every measurement here counts the
+border.
