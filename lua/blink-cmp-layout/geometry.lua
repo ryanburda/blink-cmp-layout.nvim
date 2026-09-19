@@ -53,6 +53,10 @@ end
 --- which matters when the gap is a large one ('scrolloff' set to 999, say, to
 --- keep the cursor centered).
 ---
+--- Nothing is held clear for a gap of zero or less: zero is no gap outright,
+--- and a negative one is the pinned mode, where the windows are held against
+--- the far edge of the pane and the near one is left free (see `cursor_bands`).
+---
 --- @param pane blink-cmp-layout.Pane
 --- @param cursor number Cursor's 1-indexed screen line within the pane
 --- @param wanted number
@@ -75,16 +79,27 @@ end
 --- The free rows on either side of the cursor line, once the gap is taken out.
 --- Neither band includes the cursor line itself.
 ---
+--- `anchor` is which end of the band a window is held against: the end nearest
+--- the cursor normally, so the windows sit a `gap` away from the line being
+--- edited, and the far end -- the top or bottom of the pane -- when `pinned`,
+--- so they hold still against the edge of the screen instead. A `gap` of zero
+--- is not pinned: it puts the windows right up against the cursor line.
+---
 --- @param pane blink-cmp-layout.Pane
 --- @param cursor number
 --- @param gap number
+--- @param pinned boolean
 --- @return table<'above' | 'below', blink-cmp-layout.Band>
-function M.cursor_bands(pane, cursor, gap)
+function M.cursor_bands(pane, cursor, gap, pinned)
   local cursor_row = pane.row + cursor - 1
 
   return {
-    above = { first = pane.row, last = cursor_row - gap - 1, anchor = 'bottom' },
-    below = { first = cursor_row + gap + 1, last = pane.row + pane.height - 1, anchor = 'top' },
+    above = { first = pane.row, last = cursor_row - gap - 1, anchor = pinned and 'top' or 'bottom' },
+    below = {
+      first = cursor_row + gap + 1,
+      last = pane.row + pane.height - 1,
+      anchor = pinned and 'bottom' or 'top',
+    },
   }
 end
 

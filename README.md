@@ -8,7 +8,9 @@ cursor and covering it.
   away from the cursor line, on whichever side of the cursor has more room -- below when the
   cursor is in the top half of the window, above when it is in the bottom half -- so it lands on
   the roomier side without needing to move once it is up. It never moves to make room for the
-  menu.
+  menu. With `gap = -1` it is held against that side's edge of the window instead -- the bottom
+  while the cursor is in the top half, the top while it is in the bottom half -- so the pair
+  sits at the edge of the screen rather than following the line being edited.
 - The **completion menu** stacks directly onto the far edge of the signature help window
   whenever that window is open, so the two are always on the same side of the cursor line,
   right next to each other, rather than the menu landing on the opposite side by taking its own
@@ -82,7 +84,10 @@ require('blink-cmp-layout').setup({
   -- narrower pair. Zero or less for no cap of its own.
   max_width = 120,
 
-  -- Rows held clear between the cursor line and the windows.
+  -- Rows held clear between the cursor line and the windows; zero puts them
+  -- right up against it. Negative (-1) instead locks them to the edge of the
+  -- window the side they landed on runs into: the bottom while the cursor is
+  -- in the top half, the top while it is in the bottom half.
   gap = 8,
 
   -- Rows the menu and documentation window are held at, whatever they hold, so
@@ -144,6 +149,13 @@ require('blink-cmp-layout').setup({
   gap = vim.opt.scrolloff:get(),
 })
 ```
+
+A negative `gap` -- `-1` -- is a mode of its own rather than a smaller number: instead of
+holding the windows a fixed number of rows from the cursor line, it holds them against the top
+or bottom edge of the window, whichever edge the side they landed on runs into. The signature
+help window takes that edge and the menu stacks onto it, growing back towards the cursor line,
+so the pair stays put as the cursor moves around the half of the screen it is not in. `gap = 0`
+keeps its plain meaning: no gap at all, the windows right up against the cursor line.
 
 `height` accepts a number, or a function returning one, called with the pane being placed
 against every time a window is placed -- so it can follow something that changes as you work:

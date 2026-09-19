@@ -9,7 +9,7 @@
 --- @class blink-cmp-layout.Config
 --- @field enabled boolean | fun(): boolean Checked every time a window is placed
 --- @field max_width number Widest the menu and documentation window may be *together*, borders included; zero or less for no cap
---- @field gap number Rows held clear between the cursor line and the windows
+--- @field gap number Rows held clear between the cursor line and the windows; -1 holds them against the top or bottom edge of the pane instead
 --- @field height blink-cmp-layout.Measure Rows the menu and documentation window are held at
 --- @field align 'text' | 'window' Left edge: past the gutter, or at the window's own edge
 --- @field direction ('below' | 'above')[] Which side of the cursor the pair prefers while the signature help window is closed; while it is open, the pair instead follows whichever side the signature help window landed on

@@ -44,6 +44,12 @@ local function managed(config)
   return enabled ~= false
 end
 
+--- A negative `gap` -- `-1` -- asks for the windows to be held against the top
+--- or bottom edge of the pane, whichever the side they landed on runs into,
+--- rather than a fixed number of rows from the cursor line. Zero keeps its
+--- plain meaning: no gap at all, the windows touching the cursor line.
+local function pinned(config) return config.gap < 0 end
+
 --- The width the menu and the documentation window share, borders included.
 local function box_width(config)
   return geometry.width(pane, config.max_width)
@@ -87,7 +93,7 @@ local function place_signature()
 
   local cursor = vim.fn.winline()
   local gap = geometry.gap(box, cursor, config.gap)
-  local bands = geometry.cursor_bands(box, cursor, gap)
+  local bands = geometry.cursor_bands(box, cursor, gap, pinned(config))
 
   -- The menu stacks onto whichever edge of this window faces away from the
   -- cursor (see `place_menu`), so the pair must always land on the same side
@@ -140,22 +146,31 @@ local function place_menu()
 
   local band
   if config.signature.enabled and signature ~= nil and signature.win:is_open() then
-    -- extends outward from whichever edge of the signature window faces away
-    -- from the cursor, touching it rather than leaving a gap -- the
-    -- signature window already keeps its near edge clear of the cursor
-    -- line, so the two always end up right next to each other on the same
-    -- side of it
+    -- Stacks onto the signature window, touching it rather than leaving a gap,
+    -- so the two always end up right next to each other on the same side of
+    -- the cursor line.
+    --
+    -- Which of its edges depends on where the signature window is: normally it
+    -- is a gap away from the cursor line with the rest of the pane behind it,
+    -- so the menu extends outward, onto the edge facing away from the cursor.
+    -- Pinned, the signature window is already against the edge of the screen
+    -- and has nothing behind it, so the menu takes the rows between it and the
+    -- cursor line instead, growing back towards the cursor.
     local signature_config = vim.api.nvim_win_get_config(signature.win:get_win())
     local signature_first = signature_config.row
     local signature_last = signature_first + signature.win:get_height() - 1
     local cursor_row = pane.row + cursor - 1
 
-    band = signature_first < cursor_row
-      and { first = pane.row, last = signature_first - 1, anchor = 'bottom' }
-      or { first = signature_last + 1, last = pane.row + pane.height - 1, anchor = 'top' }
+    if signature_first < cursor_row then
+      band = pinned(config) and { first = signature_last + 1, last = cursor_row - 1, anchor = 'top' }
+        or { first = pane.row, last = signature_first - 1, anchor = 'bottom' }
+    else
+      band = pinned(config) and { first = cursor_row + 1, last = signature_first - 1, anchor = 'bottom' }
+        or { first = signature_last + 1, last = pane.row + pane.height - 1, anchor = 'top' }
+    end
   else
     -- the preferred side of the cursor, unless the window does not fit there
-    local bands = geometry.cursor_bands(pane, cursor, gap)
+    local bands = geometry.cursor_bands(pane, cursor, gap, pinned(config))
     local preferred = {}
     for _, direction in ipairs(config.direction) do
       table.insert(preferred, bands[direction])
