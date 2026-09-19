@@ -4,7 +4,7 @@ Lays out [blink.cmp](https://github.com/saghen/blink.cmp)'s completion, document
 signature windows so they stay clear of the line you are editing, instead of following the
 cursor and covering it.
 
-- The **signature help window** is held a configurable gap -- `'scrolloff'` rows by default --
+- The **signature help window** is held a configurable gap -- 8 rows by default --
   away from the cursor line, on whichever side of the cursor has more room -- below when the
   cursor is in the top half of the window, above when it is in the bottom half -- so it lands on
   the roomier side without needing to move once it is up. It never moves to make room for the
@@ -14,7 +14,7 @@ cursor and covering it.
   right next to each other, rather than the menu landing on the opposite side by taking its own
   independent guess at which side fits.
 - The **documentation window** sits directly beside the menu, sharing its row and height, with
-  the two together capped at a configurable width -- `'colorcolumn'` by default -- so the pair
+  the two together capped at a configurable width -- 120 columns by default -- so the pair
   never grows wider than the code it covers.
 - All three start at the left edge of the *text*, past the number column and the rest of the
   gutter, rather than at the window edge.
@@ -79,11 +79,11 @@ require('blink-cmp-layout').setup({
 
   -- Widest the menu and documentation window may be *together*, borders
   -- included. The pane is always a limit as well, so a narrow window gives a
-  -- narrower pair.
-  max_width = 'colorcolumn',
+  -- narrower pair. Zero or less for no cap of its own.
+  max_width = 120,
 
   -- Rows held clear between the cursor line and the windows.
-  gap = 'scrolloff',
+  gap = 8,
 
   -- Rows the menu and documentation window are held at, whatever they hold, so
   -- they never resize under you. Defaults to blink's own `completion.menu.max_height`.
@@ -135,19 +135,24 @@ require('blink-cmp-layout').setup({
 
 ### Measurements
 
-`max_width`, `gap` and `height` each accept three forms:
+`max_width` and `gap` are plain numbers, read as they are set. To follow a vim option instead,
+read it in your own config -- it is evaluated once, when `setup()` is called:
 
-| Form | Example | Meaning |
-| --- | --- | --- |
-| number | `max_width = 100` | used as-is |
-| option name | `max_width = 'colorcolumn'` | read from that vim option, in the scope it belongs to, every time a window is placed |
-| function | `gap = function(pane) return math.floor(pane.height / 8) end` | called with the pane being placed against, returning a number or an option name |
+```lua
+require('blink-cmp-layout').setup({
+  max_width = tonumber(vim.opt.cc:get()[1]) or 120,
+  gap = vim.opt.scrolloff:get(),
+})
+```
 
-Reading an option means the layout follows whatever the buffer is set to, rather than a value
-fixed at startup -- a buffer with a different `'colorcolumn'` gets its own cap. `'colorcolumn'`
-is read the way Neovim writes it: only the first entry counts, and a `+n` entry is resolved
-against `'textwidth'`. An option that is unset, or holds no usable number, means "no limit" for
-`max_width` and "no gap" for `gap`.
+`height` accepts a number, or a function returning one, called with the pane being placed
+against every time a window is placed -- so it can follow something that changes as you work:
+
+```lua
+height = function(pane) return math.floor(pane.height / 3) end
+```
+
+Returning nothing falls back to blink's own `completion.menu.max_height`.
 
 The pane passed to a function is the text area of the window being edited, in editor-relative
 (0-indexed) coordinates:

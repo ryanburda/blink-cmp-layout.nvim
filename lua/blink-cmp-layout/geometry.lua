@@ -50,25 +50,25 @@ end
 
 --- The rows held clear between the cursor line and the windows, clamped so the
 --- roomier side of the cursor still has a row left for the window itself --
---- which matters when the gap follows a large 'scrolloff' (999, say, to keep
---- the cursor centered).
+--- which matters when the gap is a large one ('scrolloff' set to 999, say, to
+--- keep the cursor centered).
 ---
 --- @param pane blink-cmp-layout.Pane
 --- @param cursor number Cursor's 1-indexed screen line within the pane
---- @param wanted number | nil
+--- @param wanted number
 --- @return number
 function M.gap(pane, cursor, wanted)
-  if not wanted or wanted <= 0 then return 0 end
+  if wanted <= 0 then return 0 end
   return math.min(wanted, math.max(math.max(pane.height - cursor, cursor - 1) - 1, 0))
 end
 
 --- The width the windows share: the pane, or the cap when the pane is wider.
 ---
 --- @param pane blink-cmp-layout.Pane
---- @param max number | nil
+--- @param max number Zero or less for no cap
 --- @return number
 function M.width(pane, max)
-  if not max or max <= 0 then return pane.width end
+  if max <= 0 then return pane.width end
   return math.min(pane.width, max)
 end
 

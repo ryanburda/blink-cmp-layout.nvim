@@ -46,7 +46,7 @@ end
 
 --- The width the menu and the documentation window share, borders included.
 local function box_width(config)
-  return geometry.width(pane, settings.measure(config.max_width, pane))
+  return geometry.width(pane, config.max_width)
 end
 
 --- Holds the signature window a `gap` away from the cursor line, on whichever
@@ -76,16 +76,17 @@ local function place_signature()
   local border = win:get_border_size()
 
   -- Same cap as the menu, and applied the same way: to the whole window,
-  -- border included. blink's own `signature.window.max_width` is a plain
-  -- number, fixed at setup, so the live value is written into the window's
-  -- config before it sizes itself -- that way the text wraps to the cap and
-  -- the height it settles on accounts for the wrapping.
-  local max_width = geometry.width(box, settings.measure(config.max_width, box))
+  -- border included. The cap is clamped to the pane, which changes with the
+  -- window being edited, so it is written into blink's own
+  -- `signature.window.max_width` before the window sizes itself -- that way
+  -- the text wraps to the cap and the height it settles on accounts for the
+  -- wrapping.
+  local max_width = geometry.width(box, config.max_width)
   win.config.max_width = math.max(max_width - border.horizontal, 1)
   win:update_size()
 
   local cursor = vim.fn.winline()
-  local gap = geometry.gap(box, cursor, settings.measure(config.gap, box))
+  local gap = geometry.gap(box, cursor, config.gap)
   local bands = geometry.cursor_bands(box, cursor, gap)
 
   -- The menu stacks onto whichever edge of this window faces away from the
@@ -133,7 +134,7 @@ local function place_menu()
   win:set_width(math.max(math.floor(width) - border.horizontal, 1))
 
   local cursor = vim.fn.winline()
-  local gap = geometry.gap(pane, cursor, settings.measure(config.gap, pane))
+  local gap = geometry.gap(pane, cursor, config.gap)
   local height = settings.measure(config.height, pane)
     or require('blink.cmp.config').completion.menu.max_height
 
