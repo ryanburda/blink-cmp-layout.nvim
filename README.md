@@ -4,6 +4,12 @@ Lays out [blink.cmp](https://github.com/saghen/blink.cmp)'s completion, document
 signature windows so they stay clear of the line you are editing, instead of following the
 cursor and covering it.
 
+### After
+![Completion, documentation and signature windows held clear of the cursor line](./docs/after.png)
+
+### Stock
+![blink.cmp's default placement, with the windows following the cursor](./docs/stock.png)
+
 - The **signature help window** is held a configurable gap -- 8 rows by default --
   away from the cursor line, on whichever side of the cursor has more room -- below when the
   cursor is in the top half of the window, above when it is in the bottom half -- so it lands on
